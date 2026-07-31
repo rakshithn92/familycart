@@ -70,7 +70,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     final newStatus = switch (item.status) {
       ItemStatus.pending => ItemStatus.inCart,
       ItemStatus.inCart => ItemStatus.bought,
-      ItemStatus.bought => ItemStatus.pending,
+      ItemStatus.bought => ItemStatus.bought, // no cycling back
     };
 
     await service.updateItemStatus(widget.group.id, item.id, newStatus);
