@@ -10,7 +10,6 @@ build/
 
 # Android
 android/.gradle/
-android/app/google-services.json
 android/local.properties
 android/key.properties
 *.keystore

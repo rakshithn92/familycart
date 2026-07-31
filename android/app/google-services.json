@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "57696859139",
+    "project_id": "android-app-shopping-cart",
+    "storage_bucket": "android-app-shopping-cart.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:57696859139:android:04ff76c6e40cc0a0aaca36",
+        "android_client_info": {
+          "package_name": "com.familycart.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAD0V0scgRgwIE-bSjDtUER8CWUG9c22ys"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
