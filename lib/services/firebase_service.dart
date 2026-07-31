@@ -64,9 +64,9 @@ class FirebaseService {
     );
     await _firestore.collection('groups').doc(id).set(group.toMap());
     // Add group to user's list
-    await _firestore.collection('users').doc(createdBy).update({
+    await _firestore.collection('users').doc(createdBy).set({
       'groupIds': FieldValue.arrayUnion([id]),
-    });
+    }, SetOptions(merge: true));
     return group;
   }
 
@@ -85,9 +85,9 @@ class FirebaseService {
       'memberIds': FieldValue.arrayUnion([userId]),
       'memberNames.$userId': userName,
     });
-    await _firestore.collection('users').doc(userId).update({
+    await _firestore.collection('users').doc(userId).set({
       'groupIds': FieldValue.arrayUnion([group.id]),
-    });
+    }, SetOptions(merge: true));
     return group;
   }
 
