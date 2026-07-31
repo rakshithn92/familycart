@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/family_group.dart';
@@ -103,7 +104,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                           color: const Color(0xFF6C63FF).withOpacity(0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Text(
+                        child: SelectableText(
                           widget.group.inviteCode,
                           style: const TextStyle(
                             fontSize: 28,
@@ -112,6 +113,17 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                             color: Color(0xFF6C63FF),
                           ),
                         ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton.icon(
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: widget.group.inviteCode));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Copied to clipboard!')),
+                          );
+                        },
+                        icon: const Icon(Icons.copy, size: 18),
+                        label: const Text('Copy Code'),
                       ),
                     ],
                   ),
