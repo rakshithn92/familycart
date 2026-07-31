@@ -6,13 +6,11 @@ class ShoppingItem {
   final String name;
   final String? category;
   final int quantity;
-  final String? unit;
   final String? note;
   final String addedBy;
-  final String? checkedBy;
   final ItemStatus status;
   final DateTime createdAt;
-  final DateTime? checkedAt;
+  final int recurringDays;
 
   ShoppingItem({
     required this.id,
@@ -20,13 +18,11 @@ class ShoppingItem {
     required this.name,
     this.category,
     this.quantity = 1,
-    this.unit,
     this.note,
     required this.addedBy,
-    this.checkedBy,
     this.status = ItemStatus.pending,
     DateTime? createdAt,
-    this.checkedAt,
+    this.recurringDays = 0,
   }) : createdAt = createdAt ?? DateTime.now();
 
   ShoppingItem copyWith({
@@ -34,9 +30,8 @@ class ShoppingItem {
     int? quantity,
     String? category,
     String? note,
-    String? checkedBy,
     ItemStatus? status,
-    DateTime? checkedAt,
+    int? recurringDays,
   }) =>
       ShoppingItem(
         id: id,
@@ -44,13 +39,11 @@ class ShoppingItem {
         name: name ?? this.name,
         category: category ?? this.category,
         quantity: quantity ?? this.quantity,
-        unit: unit,
         note: note ?? this.note,
         addedBy: addedBy,
-        checkedBy: checkedBy ?? this.checkedBy,
         status: status ?? this.status,
         createdAt: createdAt,
-        checkedAt: checkedAt ?? this.checkedAt,
+        recurringDays: recurringDays ?? this.recurringDays,
       );
 
   Map<String, dynamic> toMap() => {
@@ -59,13 +52,11 @@ class ShoppingItem {
         'name': name,
         'category': category,
         'quantity': quantity,
-        'unit': unit,
         'note': note,
         'addedBy': addedBy,
-        'checkedBy': checkedBy,
         'status': status.index,
         'createdAt': createdAt.toIso8601String(),
-        'checkedAt': checkedAt?.toIso8601String(),
+        'recurringDays': recurringDays,
       };
 
   factory ShoppingItem.fromMap(Map<String, dynamic> m) => ShoppingItem(
@@ -74,16 +65,12 @@ class ShoppingItem {
         name: m['name'] as String,
         category: m['category'] as String?,
         quantity: m['quantity'] as int? ?? 1,
-        unit: m['unit'] as String?,
         note: m['note'] as String?,
         addedBy: m['addedBy'] as String? ?? '',
-        checkedBy: m['checkedBy'] as String?,
         status: ItemStatus.values[m['status'] as int? ?? 0],
         createdAt: m['createdAt'] != null
             ? DateTime.parse(m['createdAt'] as String)
             : DateTime.now(),
-        checkedAt: m['checkedAt'] != null
-            ? DateTime.tryParse(m['checkedAt'] as String)
-            : null,
+        recurringDays: m['recurringDays'] as int? ?? 0,
       );
 }

@@ -39,3 +39,8 @@ final itemsProvider = StreamProvider.family<List<ShoppingItem>, String>((ref, gr
   final service = ref.watch(firebaseServiceProvider);
   return service.streamItems(groupId);
 });
+
+final joinRequestsProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, groupId) {
+  final service = ref.watch(firebaseServiceProvider);
+  return service.streamJoinRequests(groupId);
+});

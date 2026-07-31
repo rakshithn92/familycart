@@ -20,6 +20,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
   final _noteController = TextEditingController();
   String _selectedCategory = 'General';
   int _quantity = 1;
+  int _recurringDays = 0;
 
   final _categories = [
     'General', 'Groceries', 'Snacks', 'Beverages',
@@ -49,6 +50,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
       quantity: _quantity,
       note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
       addedBy: user.uid,
+      recurringDays: _recurringDays,
     );
 
     await service.addItem(item);
@@ -57,13 +59,13 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     setState(() {
       _quantity = 1;
       _selectedCategory = 'General';
+      _recurringDays = 0;
     });
   }
 
   Future<void> _toggleStatus(ShoppingItem item) async {
     final service = ref.read(firebaseServiceProvider);
-    final user = service.currentUser;
-    if (user == null) return;
+    if (service.currentUser == null) return;
 
     final newStatus = switch (item.status) {
       ItemStatus.pending => ItemStatus.inCart,
@@ -71,16 +73,16 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
       ItemStatus.bought => ItemStatus.pending,
     };
 
-    await service.updateItemStatus(
-      widget.group.id, item.id, newStatus,
-      checkedBy: newStatus == ItemStatus.pending ? null : user.uid,
-    );
+    await service.updateItemStatus(widget.group.id, item.id, newStatus);
   }
 
   @override
   Widget build(BuildContext context) {
     final itemsAsync = ref.watch(itemsProvider(widget.group.id));
     final groupAsync = ref.watch(groupProvider(widget.group.id));
+    final user = ref.watch(currentUserProvider);
+    final isOwner = user != null && widget.group.createdBy == user.uid;
+    final joinRequestsAsync = isOwner ? ref.watch(joinRequestsProvider(widget.group.id)) : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -225,6 +227,76 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 8),
+          // Recurring toggle
+          Row(
+            children: [
+              const Text('Repeat:', style: TextStyle(fontSize: 12, color: Colors.white54)),
+              const SizedBox(width: 8),
+              ...[
+                (0, 'Never'),
+                (7, 'Weekly'),
+                (30, 'Monthly'),
+              ].map((r) => Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: ChoiceChip(
+                  label: Text(r.$2, style: const TextStyle(fontSize: 12)),
+                  selected: _recurringDays == r.$1,
+                  onSelected: (_) => setState(() => _recurringDays = r.$1),
+                  selectedColor: const Color(0xFF4ECDC4),
+                  visualDensity: VisualDensity.compact,
+                ),
+              )),
+            ],
+          ),
+
+          // Join requests banner (owner only)
+          if (isOwner && joinRequestsAsync != null)
+            joinRequestsAsync.when(
+              data: (requests) {
+                if (requests.isEmpty) return const SizedBox.shrink();
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  color: const Color(0xFF6C63FF).withOpacity(0.1),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('${requests.length} join request(s)',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      const SizedBox(height: 8),
+                      ...requests.map((r) => Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Row(
+                          children: [
+                            Icon(Icons.person, size: 18, color: Colors.white54),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(r['userName'] ?? 'Unknown',
+                                style: const TextStyle(fontSize: 14))),
+                            TextButton(
+                              onPressed: () async {
+                                final svc = ref.read(firebaseServiceProvider);
+                                await svc.approveJoinRequest(
+                                    widget.group.id, r['userId'], r['userName']);
+                              },
+                              child: const Text('Approve', style: TextStyle(color: Color(0xFF4ECDC4))),
+                            ),
+                            TextButton(
+                              onPressed: () async {
+                                final svc = ref.read(firebaseServiceProvider);
+                                await svc.rejectJoinRequest(widget.group.id, r['userId']);
+                              },
+                              child: const Text('Reject', style: TextStyle(color: Colors.redAccent)),
+                            ),
+                          ],
+                        ),
+                      )),
+                    ],
+                  ),
+                );
+              },
+              error: (_, __) => const SizedBox.shrink(),
+              loading: () => const SizedBox.shrink(),
+            ),
 
           // Items list
           Expanded(
@@ -370,6 +442,8 @@ class _ItemTile extends StatelessWidget {
                     ),
                     if (item.category != null && item.category != 'General')
                       Text(item.category!, style: TextStyle(fontSize: 11, color: Colors.white24)),
+                    if (item.recurringDays > 0)
+                      Text('Every ${item.recurringDays}d', style: TextStyle(fontSize: 11, color: Color(0xFF4ECDC4))),
                   ],
                 ),
               ),

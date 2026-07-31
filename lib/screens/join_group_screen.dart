@@ -36,7 +36,7 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
       if (user == null) throw Exception('Not logged in');
 
       final profile = await service.getUserProfile(user.uid);
-      final group = await service.joinGroup(code, user.uid, profile?.name ?? 'User');
+      final group = await service.requestJoin(code, user.uid, profile?.name ?? 'User');
 
       if (group == null) {
         setState(() => _error = 'Invalid invite code. Check with your family member.');

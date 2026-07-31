@@ -11,19 +11,11 @@ class FirebaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final _uuid = const Uuid();
 
-  // --- Initialization ---
-
-  Future<void> initialize() async {
-    await Firebase.initializeApp();
-  }
-
   // --- Auth ---
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
 
-  /// Sign in anonymously — no phone, no OTP, no password.
-  /// Returns the created/existing user.
   Future<User> signInAnonymously() async {
     final result = await _auth.signInAnonymously();
     return result.user!;
@@ -63,14 +55,13 @@ class FirebaseService {
       memberNames: {createdBy: creatorName},
     );
     await _firestore.collection('groups').doc(id).set(group.toMap());
-    // Add group to user's list
     await _firestore.collection('users').doc(createdBy).set({
       'groupIds': FieldValue.arrayUnion([id]),
     }, SetOptions(merge: true));
     return group;
   }
 
-  Future<FamilyGroup?> joinGroup(String inviteCode, String userId, String userName) async {
+  Future<FamilyGroup?> requestJoin(String inviteCode, String userId, String userName) async {
     final snapshot = await _firestore
         .collection('groups')
         .where('inviteCode', isEqualTo: inviteCode)
@@ -79,16 +70,54 @@ class FirebaseService {
     if (snapshot.docs.isEmpty) return null;
 
     final group = FamilyGroup.fromMap(snapshot.docs.first.data());
-    if (group.memberIds.contains(userId)) return group; // already a member
+    if (group.memberIds.contains(userId)) return group;
 
-    await _firestore.collection('groups').doc(group.id).update({
+    await _firestore
+        .collection('groups')
+        .doc(group.id)
+        .collection('join_requests')
+        .doc(userId)
+        .set({
+      'userId': userId,
+      'userName': userName,
+      'createdAt': DateTime.now().toIso8601String(),
+    });
+    return group;
+  }
+
+  Future<void> approveJoinRequest(String groupId, String userId, String userName) async {
+    await _firestore.collection('groups').doc(groupId).update({
       'memberIds': FieldValue.arrayUnion([userId]),
       'memberNames.$userId': userName,
     });
     await _firestore.collection('users').doc(userId).set({
-      'groupIds': FieldValue.arrayUnion([group.id]),
+      'groupIds': FieldValue.arrayUnion([groupId]),
     }, SetOptions(merge: true));
-    return group;
+    await _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('join_requests')
+        .doc(userId)
+        .delete();
+  }
+
+  Future<void> rejectJoinRequest(String groupId, String userId) async {
+    await _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('join_requests')
+        .doc(userId)
+        .delete();
+  }
+
+  Stream<List<Map<String, dynamic>>> streamJoinRequests(String groupId) {
+    return _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('join_requests')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => d.data()).toList());
   }
 
   Stream<List<FamilyGroup>> streamUserGroups(List<String> groupIds) {
@@ -117,21 +146,47 @@ class FirebaseService {
         .set(item.toMap());
   }
 
-  Future<void> updateItemStatus(String groupId, String itemId, ItemStatus status,
-      {String? checkedBy}) async {
+  Future<void> updateItemStatus(String groupId, String itemId, ItemStatus status) async {
     final data = <String, dynamic>{
       'status': status.index,
     };
-    if (checkedBy != null) {
-      data['checkedBy'] = checkedBy;
-      data['checkedAt'] = DateTime.now().toIso8601String();
-    }
     await _firestore
         .collection('groups')
         .doc(groupId)
         .collection('items')
         .doc(itemId)
         .update(data);
+
+    // Auto-recur: create a new pending copy when a recurring item is bought
+    if (status == ItemStatus.bought) {
+      final doc = await _firestore
+          .collection('groups')
+          .doc(groupId)
+          .collection('items')
+          .doc(itemId)
+          .get();
+      if (doc.exists) {
+        final item = ShoppingItem.fromMap(doc.data()!);
+        if (item.recurringDays > 0) {
+          final newItem = ShoppingItem(
+            id: _uuid.v4(),
+            groupId: groupId,
+            name: item.name,
+            category: item.category,
+            quantity: item.quantity,
+            note: item.note,
+            addedBy: item.addedBy,
+            recurringDays: item.recurringDays,
+          );
+          await _firestore
+              .collection('groups')
+              .doc(groupId)
+              .collection('items')
+              .doc(newItem.id)
+              .set(newItem.toMap());
+        }
+      }
+    }
   }
 
   Future<void> updateItem(String groupId, ShoppingItem item) async {

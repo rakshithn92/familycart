@@ -6,8 +6,11 @@
 ## Features (priority order)
 
 ### P0 — Must have
-- [ ] **Delete items** — swipe-to-delete or long-press delete on shopping items
+- [x] **Join requests with approve/reject** — members request to join, owner approves/rejects
+- [x] **Recurring items** — mark items as weekly/monthly, auto-reappear when bought
+- [x] **Pantry tracker** — mark what you already have at home
 - [ ] **Edit items** — tap to edit name, quantity, category
+- [ ] **Delete items** — swipe-to-delete or long-press delete on shopping items
 - [ ] **Leave group** — option to leave a group (removes from member list)
 
 ### P1 — Should have
