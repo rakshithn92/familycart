@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/app_user.dart';
 import '../models/family_group.dart';
 import '../providers/providers.dart';
 import 'group_detail_screen.dart';
