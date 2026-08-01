@@ -70,10 +70,15 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     final newStatus = switch (item.status) {
       ItemStatus.pending => ItemStatus.inCart,
       ItemStatus.inCart => ItemStatus.bought,
-      ItemStatus.bought => ItemStatus.bought, // no cycling back
+      ItemStatus.bought => ItemStatus.bought,
     };
 
     await service.updateItemStatus(widget.group.id, item.id, newStatus);
+  }
+
+  Future<void> _deleteItem(ShoppingItem item) async {
+    final service = ref.read(firebaseServiceProvider);
+    await service.deleteItem(widget.group.id, item.id);
   }
 
   @override
@@ -330,15 +335,27 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                   children: [
                     if (pending.isNotEmpty) ...[
                       _SectionHeader(title: 'To Buy', count: pending.length),
-                      ...pending.map((i) => _ItemTile(item: i, onToggle: () => _toggleStatus(i))),
+                      ...pending.map((i) => _ItemTile(
+                        item: i,
+                        onToggle: () => _toggleStatus(i),
+                        onDelete: () => _deleteItem(i),
+                      )),
                     ],
                     if (inCart.isNotEmpty) ...[
                       _SectionHeader(title: 'In Cart', count: inCart.length, color: const Color(0xFFFFD93D)),
-                      ...inCart.map((i) => _ItemTile(item: i, onToggle: () => _toggleStatus(i))),
+                      ...inCart.map((i) => _ItemTile(
+                        item: i,
+                        onToggle: () => _toggleStatus(i),
+                        onDelete: () => _deleteItem(i),
+                      )),
                     ],
                     if (bought.isNotEmpty) ...[
                       _SectionHeader(title: 'Bought', count: bought.length, color: const Color(0xFF4ECDC4)),
-                      ...bought.map((i) => _ItemTile(item: i, onToggle: () => _toggleStatus(i))),
+                      ...bought.map((i) => _ItemTile(
+                        item: i,
+                        onToggle: () => _toggleStatus(i),
+                        onDelete: () => _deleteItem(i),
+                      )),
                     ],
                   ],
                 );
@@ -386,7 +403,8 @@ class _SectionHeader extends StatelessWidget {
 class _ItemTile extends StatelessWidget {
   final ShoppingItem item;
   final VoidCallback onToggle;
-  const _ItemTile({required this.item, required this.onToggle});
+  final VoidCallback? onDelete;
+  const _ItemTile({required this.item, required this.onToggle, this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -449,6 +467,29 @@ class _ItemTile extends StatelessWidget {
               ),
               if (item.note != null && item.note!.isNotEmpty)
                 Icon(Icons.notes, size: 16, color: Colors.white24),
+              if (onDelete != null)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 18, color: Colors.white24),
+                  onPressed: () => showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Delete item?'),
+                      content: Text('Remove "${item.name}" from the list?'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            onDelete!();
+                          },
+                          child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
             ],
           ),
         ),
